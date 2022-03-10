@@ -1,4 +1,8 @@
-![Logo](~/www/logo.jpg)
+<p align="center">
+    <img src="~/www/logo.jpg">
+</p>
+
+
 
 # Community-Feedback-Dashboard-Agincourt
 This is a reporting tool created to help stakeholders and colleagues within the organisation 
