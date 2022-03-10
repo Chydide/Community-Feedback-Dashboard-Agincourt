@@ -1,0 +1,170 @@
+---
+output:
+ pdf_document:
+   includes:
+     in_header: header_multi.tex
+geometry: margin=0.5cm
+params:
+ year: 2019
+header-includes: 
+- \usepackage{booktabs}
+- \usepackage{sectsty} \sectionfont{\centering}
+- \usepackage{titling}
+- \pretitle{\begin{center}
+    \includegraphics[width=6.5in,height=5in]{"C:/Users/Chido/Pictures/logo.jpg"}\LARGE\\}
+- \posttitle{\end{center}}
+
+---
+
+
+
+---
+title: "Death information for `r params$year`, MRC/WITS-AGINCOURT"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(RODBC)
+library(kableExtra)
+library(RColorBrewer)
+library(ggrepel)
+library(waffle)
+
+
+```
+
+# Cause of Death
+```{r, echo = FALSE}
+
+myPalette <- brewer.pal(6, "Set2") 
+
+con <- odbcConnect("SummaryIndicators")
+ cod_ab <- sqlQuery(con,"SELECT distinct Years,Ordered,AgeGroup, Total
+  FROM CFB..CoDVA 
+  ") %>%
+   filter(Years == params$year)
+  
+  cod_ad <- sqlQuery(con,"SELECT Years, AgeGroup, Total, substring(Cause,patindex('%[A-Z]%', Cause), len(Cause) +1) as Cause, Rnk, CntAll
+  FROM CFB..CoDVA 
+  order by Years,Ordered") %>%
+   filter(Years == params$year) %>%
+    select(AgeGroup, Total, Cause, Rnk, CntAll) %>%
+    rename( 'Age Group'=AgeGroup, 'Cause of Death' = Cause, Rank = Rnk, Number = CntAll)
+  
+  cod_ae <- sqlQuery(con,"SELECT *
+  FROM CFB..VA_CoDp 
+  order by Years") %>%
+   filter(Years == params$year) %>%
+    select(DiedAt, Under5, 'Age5-14','Age15-49','Age50-64','65AndOlder', TOTALDEATH) %>%
+    arrange(DiedAt)    %>%
+    rename('Place of Death'= DiedAt, 'Under 5' = 'Under5', 'Aged 5-14'='Age5-14','Aged 15-49'='Age15-49','Aged 50-64'= 'Age50-64','Aged 65 and older'='65AndOlder', 'Total deaths' = TOTALDEATH ) 
+  
+  cod_af <- sqlQuery(con,"SELECT *
+  FROM CFB..VA_CoDp 
+  order by Years") %>%
+   filter(Years == params$year) %>%
+    select(DiedAt, TOTALDEATH) %>%
+    mutate(prop = TOTALDEATH/sum(TOTALDEATH)) %>%
+    arrange(prop) %>%
+    mutate(ymax = cumsum(prop))
+   
+  cod_af$ymin <- c(0, head(cod_af$ymax, n=-1))
+  
+# Compute label position
+cod_af$labelPosition <- (cod_af$ymax + cod_af$ymin) / 2
+
+# Compute a good label
+cod_af$label <- paste0(cod_af$DiedAt, "\n Deaths: ", cod_af$TOTALDEATH)
+ 
+```
+
+\btwocol
+
+
+```{r, echo = FALSE, out.height = "120%"}
+ggplot(cod_ab, aes(x=Ordered, y =Total)) +
+  geom_bar(stat = "identity", fill="yellow4")+
+#  geom_text(aes(label=len), vjust=1.6, color="white", size=3.5)+
+  geom_text(aes(label = Total), vjust=1.6, color="white", size=5)+
+ scale_x_discrete(limits = c("Neonates","<1","1-4", "5-19","20-49","50-64","65+")) +
+  labs(x = 'Age Group', y = 'Number of people dying', title ='Number of deaths per age group')+
+                     theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
+
+
+
+\begingroup
+\fontsize{25}{25}\selectfont
+\textcolor{olive}{`r sqlQuery(con,"SELECT Years, AgeGroup, Total, substring(Cause,patindex('%[A-Z]%', Cause), len(Cause) +1) as Cause, Rnk, CntAll FROM CFB..CoDVA order by Years,Ordered") %>%filter(Years == 2019,  Rnk ==1) %>% filter( Total == max(Total)) %>% select(Cause)`} 
+are the major cause of death among adults aged
+\textcolor{olive}{`r sqlQuery(con,"SELECT Years, AgeGroup, Total, substring(Cause,patindex('%[A-Z]%', Cause), len(Cause) +1) as Cause, Rnk, CntAll FROM CFB..CoDVA order by Years,Ordered") %>%filter(Years == 2019,  Rnk ==1) %>% filter( Total == max(Total)) %>% select(AgeGroup)`} 
+in MRC/Wits-Agincourt HDSS Area in `r params$year`. They account for 
+ \begingroup
+\fontfamily{ppl}\fontsize{50}{50}\selectfont
+ \textbf{\textcolor{olive}{`r sqlQuery(con,"SELECT Years, AgeGroup, Total, Cause, Rnk, CntAll FROM CFB..CoDVA order by Years,Ordered") %>% filter(Years == 2019,  Rnk ==1) %>% filter( Total == max(Total)) %>% mutate(perc = floor(CntAll/Total* 100))%>% select (perc)`\%}} 
+ \fontsize{25}{25}\selectfont
+ \endgroup
+ of all the deaths in this age group
+\endgroup
+
+\etwocol
+
+
+```{r pressure, echo=FALSE}
+kable(cod_ad,booktabs = T)%>%
+kable_styling(latex_options = "striped", stripe_index = c(1,7:11,17:21), position = "center")
+
+```
+
+
+
+# Place of death
+
+```{r, echo=FALSE}
+kable(cod_ae,booktabs = T) %>%
+  kable_styling( position = "center")
+
+```
+
+# ```{r, echo=FALSE }
+# 
+# 
+# 
+# # Make the plot
+# ggplot(cod_af, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=DiedAt)) +
+#   geom_rect() +
+#    geom_label_repel( x=3.5, aes(y=labelPosition, label=label), size=3) +
+#  # geom_text_repel( x=2, aes(y=labelPosition, label=label, color=DiedAt), size=4, ) + # x here controls label position (inner / outer)
+#   scale_fill_brewer(palette=3) +
+#   scale_color_brewer(palette=3) +
+#   coord_polar(theta="y") +
+#   xlim(c(2, 4)) +
+#   theme_void() +
+#   theme(legend.position = "none")
+# ```
+
+```{r, echo=FALSE }
+
+cod_afg <- sqlQuery(con,"SELECT *
+  FROM CFB..VA_CoDp 
+  order by Years") %>%
+  filter(Years == 2019) %>%
+  select(DiedAt, TOTALDEATH) %>%
+  mutate(prop = TOTALDEATH/sum(TOTALDEATH)*100) %>%
+  mutate(prop = round(prop, 0)) %>%
+  arrange(desc(prop))
+
+cases_afg <- cod_afg$prop
+names(cases_afg) <- cod_afg$DiedAt
+
+waffle(cases_afg)
+
+
+
+```

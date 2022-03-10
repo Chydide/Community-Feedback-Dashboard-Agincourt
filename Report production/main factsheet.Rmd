@@ -1,0 +1,348 @@
+---
+title: "MRC/WITS-AGINCOURT UNIT STUDY AREA HDSS FACT SHEET"
+author: ""
+date: ""
+output: pdf_document
+params:
+  year: 2016
+  village: 9
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RODBC)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(forcats)
+library(RColorBrewer)
+#library(kableExtra)
+```
+
+
+```{r, include = F}
+ name = "Chido"
+ 
+  if (params$village == 1) {
+    name = "Agincourt"
+  } else if (params$village == 80) {
+    name = "Original villages within the Agincourt Health and Demographic Surveillence Site "
+  } else if (params$village == 90) {
+    name = "Agincourt Health and Demographic Surveillence Site"
+  } else if (params$village == 2) {
+    name = "Croquetlawn"
+  } else if (params$village == 3) {
+    name = "Cunningmore A"
+  } else if (params$village == 4) {
+    name = "Cunningmore B"
+  } else if (params$village == 5) {
+    name = "Huntington"
+  } else if (params$village == 6) {
+    name = "Ireagh A"
+  } else if (params$village == 7) {
+    name = "Ireagh B"
+  } else if (params$village == 8) {
+    name = "Justicia A"
+  } else if (params$village == 9) {
+    name = "Kildare A"
+  } else if (params$village == 10) {
+    name = "Kildare B"
+  } else if (params$village == 11) {
+    name = "Lillydale A"
+  } else if (params$village == 12) {
+    name = "Lillydale B"
+  } else if (params$village == 13) {
+    name = "Newington B"
+  } else if (params$village == 14) {
+    name = "Newington C"
+  } else if (params$village == 15) {
+    name = "Somerset A"
+  } else if (params$village == 16) {
+    name = "Xanthia"
+  } else if (params$village == 21) {
+    name = "Khaya Lami"
+  } else if (params$village == 22) {
+    name = "Croquet Lawn B"
+  } else if (params$village == 23) {
+    name = "Belfast"
+  } else if (params$village == 24) {
+    name = "Dumphries A"
+  } else if (params$village == 25) {
+    name = "Dumphries B"
+  } else if (params$village == 26) {
+    name = "Dumphries C"
+  } else if (params$village == 27) {
+    name = "Ireagh C"
+  } else if (params$village == 28) {
+    name = "Somerset C"
+  } else if (params$village == 29) {
+    name = "MP Stream"
+  } else if (params$village == 30) {
+    name = "Rolle C"
+  } else if (params$village == 31) {
+    name = "Kumani"
+  } else {
+    name = "Makaringe"
+  }
+  
+```
+
+
+```{r, include = F}
+con <- odbcConnect("Summaryindicators")
+table1 <- sqlQuery(con,"select * from cfb..Table1")%>%
+  filter(Years == as.numeric(params$year) +1, VillNo== params$village) %>%
+  select(HouseholdCnt, Population, Male, Female, Under5, SchoolGoing)
+```
+
+```{r, include = F}
+table1 <- t(table1)
+table1 <- cbind(newColName = rownames(table1), table1)
+rownames(table1) <- 1:nrow(table1)
+colnames(table1) <- c("Category", "Total")
+table1[1,1] <- "Households"
+table1[2,1] <- "Population"
+table1[3,1] <- "Male"
+table1[4,1] <- "Female"
+table1[5,1] <- "Children under 5"
+table1[6,1] <- "Children of school-going age (5-19)"
+
+table2 <- sqlQuery(con,"select * from cfb..PopulationByAgeGrp 
+order by Ordered")%>%
+  filter(Years == as.numeric(params$year) +1, VillNo== params$village) %>%
+  select(AgeGroup, MalePop, FemalePop, MidYearPop)
+
+colnames(table2) <- c("Age group","Male","Female","Total")
+
+fig1 <- sqlQuery(con,"select * from cfb..PopulationByAgeGrp")%>%
+  filter(Years == as.numeric(params$year) +1, VillNo== params$village)
+table3 <- sqlQuery(con,"select * from cfb..freq where Category in ('MaleBirth','FemaleBirth', 'TotalBirth')") %>%
+  filter(Years == params$year, VillNo== params$village)%>%
+  select(Category, Count)
+levels(table3$Category) <- c("Female Births","Male Births","Total Births")
+table3$Category <- factor(table3$Category, levels = c("Male Births","Female Births","Total Births"))
+
+fig2 <- sqlQuery(con,"select * from cfb..cruderates where Category = 'CBR'")%>%
+  filter(Years == params$year, VillNo== params$village)
+
+table4 <- sqlQuery(con,"select * from cfb..Birth_ASFR")%>%
+ # mutate(ASFR = ASFR * 1000) %>%
+  filter(Years == params$year, VillNo== params$village) %>%
+  select(AgeGroup, ASFR)
+
+table100 <- table4 %>%
+            mutate(ASFR = floor(ASFR * 1000)) %>%
+            arrange(AgeGroup)
+
+table5 <- sqlQuery(con,"select * from cfb..freq where Category in ('MaleDeaths','FemaleDeaths', 'TotalDeaths')")%>%
+  filter(Years == params$year, VillNo== params$village) %>%
+  select(Category, Count)
+levels(table5$Category) <- c("Female Deaths","Male Deaths","Total Deaths")
+table5$Category <- factor(table5$Category, levels = c("Male Deaths","Female Deaths","Total Deaths"))
+
+fig3 <- sqlQuery(con,"select * from cfb..cruderates where Category = 'CDR'")%>%
+  filter(Years == params$year, VillNo== params$village)
+
+
+
+
+table6 <- sqlQuery(con,"select * from cfb..freq where Category in ('MaleInMig','FemaleInMig', 'TotalInMig')")%>%
+ filter(Years == params$year, VillNo== params$village) %>%
+ select(Category, Count)
+
+table6$Category <- factor(table6$Category)
+levels(table6$Category) <- c("Female In-Migration","Male In-Migration","Total In-Migration")
+table6$Category <- factor(table6$Category, levels = c("Male In-Migration","Female In-Migration","Total In-Migration"))
+
+table7 <- sqlQuery(con,"select * from cfb..freq where Category in ('MaleOutMig','FemaleOutMig', 'TotalOutMig')")%>%
+  filter(Years == params$year, VillNo== params$village) %>%
+  select(Category, Count)
+levels(table7$Category) <- c("Female Out-Migration","Male Out-Migration","Total Out-Migration")
+table7$Category <- factor(table7$Category, levels = c("Male Out-Migration","Female Out-Migration","Total Out-Migration"))
+
+```
+\center  
+# _`r name`_   
+
+
+## Introduction
+
+
+
+\left
+This "Fact Sheet" provides basic information on the population and demographics for the Agincourt HDSS study area using data from the `r params$year` and `r as.numeric(params$year) + 1` annual updates across all villages in the study area. Whenever you use this information, please reference it as being obtained from MRC/Wits Rural Public Health and Health Transitions Research Unit (Agincourt). 
+
+
+*Villages in the Agincourt Health and Socio-Demographic Surveillance (HDSS) System study area in `r params$year`/`r as.numeric(params$year) +1` include*:    
+Agincourt, Belfast, Croquet Lawn, Croquet Lawn B, Cunningmore A, Cunningmore B, Dumphries A, Dumphries B, Dumphries C, Huntington, Ireagh A, Ireagh B, Ireagh C, Justicia, Khaya Lami, Kildare A, Kildare B, Kumani, Lillydale A, Lillydale B, Makaringe, MP Stream, Newington B, Newington C, Rolle C, Somerset, Somerset C, and Xanthia.
+
+Where is `r name` village in the MRC/Wits-Agincourt Unit Health and socio-Demographic System (HDSS) study area?
+
+<center>
+![MRC/Wits-Agincourt Unit Health and socio-Demographic System (HDSS) study area](\Users\Chido\Pictures\Agincourt HDSS.jpg)
+</center>
+
+
+\pagebreak
+
+# `r name` village population `r as.numeric(params$year) + 1`
+
+The numbers shown below are calculated according to numbers for the end of June `r as.numeric(params$year) + 1`. The numbers are known as mid-year population figures.
+
+<center>
+
+```{r echo = FALSE}
+#library(stargazer)
+knitr::kable(table1) 
+
+```
+
+<center>
+
+Below you can see how many people were living in `r name` of different ages in June `r as.numeric(params$year)+ 1`.
+
+```{r echo = FALSE, results = 'asis'}
+
+knitr::kable(table2)
+```
+
+Below you can see the population structure of `r name` for `r as.numeric(params$year)+ 1`.  
+
+```{r echo = FALSE, results = 'asis', warning = FALSE}
+ fig_1 <- fig1 %>%
+        rename(Male = MalePop, Female = FemalePop) %>%
+        gather(key = Gender, value = Population, -c(Years, VillNo, PoliticalVillage, Ordered,AgeGroup, MidYearPop))%>%
+    mutate(Population = replace(Population,Gender=="Male",-Population))
+
+ggplot(fig_1, aes(x =Ordered, y = Population, fill = Gender)) + 
+  geom_bar(data=subset(fig_1, Gender == "Female"), stat = "identity") + 
+  geom_bar(data=subset(fig_1, Gender == "Male"), stat = "identity") + 
+  labs(x = "Age group") +
+  scale_y_continuous(labels = abs) + 
+  scale_x_discrete(limits = c("0-4","5-9", "10-14","15-19", "20-24", "25-29", "30-34", "35-39","40-44","45-49","50-54","55-59", "60-64","65-69","70-74","75-79","80-84","85-89","90-94","95+"))+
+  coord_flip() + 
+  scale_fill_grey() + 
+  theme_bw()+
+  theme(legend.title.align=0.5) +
+                     theme(legend.box =  "horizontal",
+                           text = element_text(family = "Bookman"),
+                           title = element_text(color = "gray25"),
+                           plot.caption = element_text(color = "gray30"),
+                           plot.subtitle = element_text(size = 12))
+```
+
+# Births
+
+## Number of Births by Sex 
+The number of births recorded in `r name` are shown below. We can only provide data to the end of `r params$year`. 
+
+```{r echo = FALSE, results = 'asis'}
+knitr::kable(table3)
+```
+
+
+
+
+## Crude Birth Rate (how many babies born for every one thousand people)
+
+The graph below shows the crude birth rates in `r name` in `r params$year`. 
+
+```{r echo = FALSE, warning =FALSE, out.width = "80%"}
+
+ggplot(fig2, aes(x= Years , y= CrudeRate)) +
+  geom_bar(stat = "identity", width = 0.3) +
+  labs(
+    x = "Year",
+    y = "Crude Birth Rate per 1000"
+  ) +
+  theme(legend.title.align=0.5) +
+                     theme(legend.box =  "horizontal",
+                           text = element_text(family = "Bookman"),
+                           title = element_text(color = "gray25"),
+                           plot.caption = element_text(color = "gray30"),
+                           plot.subtitle = element_text(size = 12))
+```
+
+The crude birth rate is found by comparing the number of babies born to the total population.  For every 1 000 people (all ages and both male and female) living in `r name` in the year of `r params$year`, `r floor(fig2$CrudeRate)` babies were born.
+
+\pagebreak
+
+## Births by Mother's Age and Age Specific Fertility Rates
+
+Research within the MRC/Wits-Agincourt Unit HDSS study area continues to look closely at fertility.  You can see the number of babies born to mothers of different ages in the study area in `r params$year` below.
+
+```{r echo = FALSE, results = 'asis'}
+knitr::kable(table100)
+```
+
+
+The age specific fertility rates of `r name` in `r params$year` are shown below. 
+
+```{r echo = FALSE, warning =FALSE, out.width = "80%"}
+
+ggplot(table4, aes(x= AgeGroup , y= ASFR*1000))+
+  geom_bar(stat = "identity", width = 0.3)+
+  labs(
+    x = "Age group",
+    y = "Age-specific fertility rate per 1000 women"
+  ) +
+  theme(legend.title.align=0.5) +
+                     theme(legend.box =  "horizontal",
+                           text = element_text(family = "Bookman"),
+                           title = element_text(color = "gray25"),
+                           plot.caption = element_text(color = "gray30"),
+                           plot.subtitle = element_text(size = 12))
+```
+
+
+We find the age specific fertility rate by looking at how many women in a certain age group have had babies in a certain year. For example, we can see that in `r params$year`, for the women in the age group 15-19, `r floor(table4$ASFR[table4$AgeGroup == "15-19"] * 1000)` out of every 1000 gave birth (if there had been over 1000 living in `r name`. 
+
+# Deaths
+Below you can see the total number of deaths that occurred in the `r name` in `r params$year`. 
+
+```{r echo = FALSE, results = 'asis'}
+knitr::kable(table5)
+```
+
+Below you can see the total number of death that occurred in the `r name` in `r params$year`.
+
+
+```{r echo = FALSE, warning =FALSE, out.width = "80%"}
+
+ggplot(fig3, aes(x= factor(Years) , y= CrudeRate))+
+  geom_bar(stat = "identity", width = 0.3)+
+  labs(
+    x = 'Year',
+    y = 'Crude Death Rate per 1000'
+  ) +
+  theme(legend.title.align=0.5) +
+                     theme(legend.box =  "horizontal",
+                           text = element_text(family = "Bookman"),
+                           title = element_text(color = "gray25"),
+                           plot.caption = element_text(color = "gray30"),
+                           plot.subtitle = element_text(size = 12))
+
+```
+
+
+The crude death rate is found by looking at how many people died for every 1 000 people living in the population.  In `r params$year`, for every 1 000 people in the population of `r name`, `r floor(fig3$CrudeRate)` died. 
+
+# Migration
+**Permanent migration patterns**
+
+Below you can see how many people have moved into and out of `r name` permanently for the year of `r params$year`. 
+
+```{r echo = FALSE, results = 'asis'}
+knitr::kable(table6)
+
+```
+
+
+```{r echo = FALSE, results = 'asis'}
+knitr::kable(table7)
+
+```

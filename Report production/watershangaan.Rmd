@@ -1,0 +1,146 @@
+---
+title: "WATER SUPPLY INFORMATION"
+date: ""
+output: pdf_document
+fontsize: 12pt
+geometry: margin=2cm
+fig_width: 4 
+fig_height: 4 
+params: 
+      year: NA
+      village: NA
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{sectsty} \sectionfont{\centering}
+- \usepackage{titling}
+- \pretitle{\begin{center}
+    \includegraphics[width=6.5in,height=4in]{"C:/Users/Chido/Pictures/logo.jpg"}\LARGE\\}
+- \posttitle{\end{center}}
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(RODBC)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(forcats)
+library(RColorBrewer)
+#library(kableExtra)
+
+ name = "Chido"
+ 
+  if (params$village == 1) {
+    name = "Agincourt"
+  } else if (params$village == 80) {
+    name = "Original villages within the Agincourt Health and Demographic Surveillence Site "
+  } else if (params$village == 90) {
+    name = "Agincourt Health and Demographic Surveillence Site"
+  } else if (params$village == 2) {
+    name = "Croquetlawn"
+  } else if (params$village == 3) {
+    name = "Cunningmore A"
+  } else if (params$village == 4) {
+    name = "Cunningmore B"
+  } else if (params$village == 5) {
+    name = "Huntington"
+  } else if (params$village == 6) {
+    name = "Ireagh A"
+  } else if (params$village == 7) {
+    name = "Ireagh B"
+  } else if (params$village == 8) {
+    name = "Justicia A"
+  } else if (params$village == 9) {
+    name = "Kildare A"
+  } else if (params$village == 10) {
+    name = "Kildare B"
+  } else if (params$village == 11) {
+    name = "Lillydale A"
+  } else if (params$village == 12) {
+    name = "Lillydale B"
+  } else if (params$village == 13) {
+    name = "Newington B"
+  } else if (params$village == 14) {
+    name = "Newington C"
+  } else if (params$village == 15) {
+    name = "Somerset A"
+  } else if (params$village == 16) {
+    name = "Xanthia"
+  } else if (params$village == 21) {
+    name = "Khaya Lami"
+  } else if (params$village == 22) {
+    name = "Croquet Lawn B"
+  } else if (params$village == 23) {
+    name = "Belfast"
+  } else if (params$village == 24) {
+    name = "Dumphries A"
+  } else if (params$village == 25) {
+    name = "Dumphries B"
+  } else if (params$village == 26) {
+    name = "Dumphries C"
+  } else if (params$village == 27) {
+    name = "Ireagh C"
+  } else if (params$village == 28) {
+    name = "Somerset C"
+  } else if (params$village == 29) {
+    name = "MP Stream"
+  } else if (params$village == 30) {
+    name = "Rolle C"
+  } else if (params$village == 31) {
+    name = "Kumani"
+  } else {
+    name = "Makaringe"
+  }
+  
+
+# setup  ODBC connction to the cfb databse
+
+
+con <- odbcConnect("SummaryIndicators")
+watersupply <- sqlQuery(con,"select * from cfb..WaterSupply") %>%
+              filter(Year == params$year, VillNo== params$village)
+        
+```
+\pagenumbering{gobble}
+# for `r name` in `r watersupply$Year[1]`
+
+```{r, echo=FALSE, warning= FALSE}
+watersupply <- watersupply  %>%
+  dplyr::select(Year,Source,NoofHouseholds)
+
+colnames(watersupply) <- c("Year","Wamati","NhlayoyaMiMiti")
+#watersupply$Source <- as.character(watersupply$Source)
+watersupply[watersupply == "Tap in House"]<-"Pompi yale ndlwini"
+watersupply[watersupply == "Tap in Yard"]<-"Pompi yale jaratini"
+watersupply[watersupply == "Tap in Street"]<-"Pompi yale xitaratini"
+watersupply[watersupply == "Truck"]<-"Lori ya Mati"
+watersupply[watersupply == "Pond"]<-"Xidan'wana"
+watersupply[watersupply == "River"]<-"Nambu"
+watersupply[watersupply == "Dam"]<-"Nhlongolwani"
+watersupply[watersupply == "Rainwater tank"]<-"Tangi ra mati"
+watersupply[watersupply == "Other"]<-"Swin'wani"
+watersupply[watersupply == "Cement well"]<-"Xidan'wana"
+
+watersupply %>%
+  select( Wamati, NhlayoyaMiMiti) %>%
+  arrange(desc(NhlayoyaMiMiti)) %>%
+  head(.,5) -> n1
+  ggplot(n1,  aes(x=reorder(Wamati,-NhlayoyaMiMiti), y=NhlayoyaMiMiti))+
+  geom_bar(stat = "identity", scales ="free")+
+   theme_classic()+
+    labs(
+       x = "Wa mati",
+       y = "Nhlayo ya Mi Miti")
+  
+```
+
+```{r echo = FALSE, results = 'asis'}
+#library(stargazer)
+knitr::kable(n1, caption = "Tafura ra mphakelo wa mati")
+
+```
+

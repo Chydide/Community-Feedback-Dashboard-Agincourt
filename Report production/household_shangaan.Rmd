@@ -1,0 +1,206 @@
+---
+title: ""
+author: ""
+date: ""
+output: html_document
+params:
+  year: NA
+  village: NA
+---
+
+
+<style type="text/css">
+.main-container {
+  max-width: 2000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.lp = '')
+library(RODBC)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(forcats)
+library(gridExtra)
+library(RColorBrewer)
+library(png)
+library(cowplot)
+library(magick)
+#library(kableExtra)
+
+
+ name = "Chido"
+ 
+  if (params$village == 1) {
+    name = "Agincourt"
+  } else if (params$village == 80) {
+    name = "Original villages within the Agincourt Health and Demographic Surveillence Site "
+  } else if (params$village == 90) {
+    name = "Agincourt Health and Demographic Surveillence Site"
+  } else if (params$village == 2) {
+    name = "Croquetlawn"
+  } else if (params$village == 3) {
+    name = "Cunningmore A"
+  } else if (params$village == 4) {
+    name = "Cunningmore B"
+  } else if (params$village == 5) {
+    name = "Huntington"
+  } else if (params$village == 6) {
+    name = "Ireagh A"
+  } else if (params$village == 7) {
+    name = "Ireagh B"
+  } else if (params$village == 8) {
+    name = "Justicia A"
+  } else if (params$village == 9) {
+    name = "Kildare A"
+  } else if (params$village == 10) {
+    name = "Kildare B"
+  } else if (params$village == 11) {
+    name = "Lillydale A"
+  } else if (params$village == 12) {
+    name = "Lillydale B"
+  } else if (params$village == 13) {
+    name = "Newington B"
+  } else if (params$village == 14) {
+    name = "Newington C"
+  } else if (params$village == 15) {
+    name = "Somerset A"
+  } else if (params$village == 16) {
+    name = "Xanthia"
+  } else if (params$village == 21) {
+    name = "Khaya Lami"
+  } else if (params$village == 22) {
+    name = "Croquet Lawn B"
+  } else if (params$village == 23) {
+    name = "Belfast"
+  } else if (params$village == 24) {
+    name = "Dumphries A"
+  } else if (params$village == 25) {
+    name = "Dumphries B"
+  } else if (params$village == 26) {
+    name = "Dumphries C"
+  } else if (params$village == 27) {
+    name = "Ireagh C"
+  } else if (params$village == 28) {
+    name = "Somerset C"
+  } else if (params$village == 29) {
+    name = "MP Stream"
+  } else if (params$village == 30) {
+    name = "Rolle C"
+  } else if (params$village == 31) {
+    name = "Kumani"
+  } else {
+    name = "Makaringe"
+  }
+```
+
+```{r echo =FALSE}
+# setup  ODBC connction to the cfb databse
+
+
+con <- odbcConnect("Summaryindicators")
+Pop <- sqlQuery(con,"select * from cfb..TotPopBySex") %>%
+       filter(VillNo == params$village, Years == params$year)
+
+Households <- sqlQuery(con,"select * from cfb..Households") %>%
+       filter(VillNo == params$village, Years == params$year)
+```
+
+```{r markd, echo =FALSE} 
+ edu <- sqlQuery(con,"select * from cfb..EducGender")  %>% 
+       dplyr::select(Year, Village, Gender, 'Total learners')  %>% 
+       filter(Village == params$village & Year == params$year) %>% 
+       spread(Gender, 'Total learners') 
+``` 
+
+```{r mads, echo = FALSE}
+popage <- sqlQuery(con,"select * from cfb..pop") %>%
+          filter(VillNo == params$village, Years == params$year, Ordered>12) %>%
+          mutate(Male = sum(MalePop),Female = sum(FemalePop),Total =sum(MidYearPop)) %>%
+          dplyr::select(Male, Female, Total) %>%
+          head(.,1)
+
+ freq <- sqlQuery(con,"select * from cfb..Freq")   %>%
+       filter(VillNo == params$village, Years == params$year) %>%       
+       spread(Category, Count)
+
+# %>%
+#   filter(Year == year +1, PoliticalVillage== village) %>%
+#   select(Year,Source,NoofHouseholds)
+
+
+```
+<div class = "row">
+  
+<div class = "col-md-5">
+<body style ="background-color: white;">
+<h1 style= "color:black;"> <font size = "6">`r name` in  `r params$year` </font> </h1>
+</body>
+</div>
+  
+<div class = "col-md-7">
+![](C:/Users/Chido/Pictures/logo.jpg)
+</div>
+</div>
+
+<div class = "row">
+  
+<div class = "col-md-4">
+## Nhlayo ya vanhu
+ ![*Hi `r params$year`, ku vile na `r Pop$MidYearPop` wa vanhu lava tsahamaka eka mindyangu ya `r Households$HouseholdCnt`, lava katsaka `r Pop$Male` vaxinuna na `r Pop$Female` Vansati.*](C:\Users\Chido\Documents\CFB Reports\HF_Population.png)
+</div>
+  
+<div class = "col-md-4">
+## Dyondzo
+ ![*Hi `r params$year`, ku vile na `r edu$M + edu$F` wa vandyondzi(va malembe ya ku 5 ku fika 19), la katsaka `r edu$M` wa vafana na `r edu$F` wa vanhwanyana.*](C:\Users\Chido\Documents\CFB Reports\HF_Education.png)
+</div>
+  
+<div class = "col-md-4">
+## Vadyuhari
+![*Hi `r params$year` ku Vile na `r popage$Total` wa vadyuhari(va malembe ya ku 60 kuya ehenhla). lava katsaka `r popage$Male` wa vavainuna na `r popage$Female`  wa vavasati.*](C:\Users\Chido\Documents\CFB Reports\HF_Elderly.png)
+</div>
+</div>
+
+<center>
+<font size = "6"> **Hi nkwerhu hiva nkoka!** </font>
+
+
+<font size = "5"> **We all count!**  </font>
+</center>
+
+<div class = "row">
+  
+<div class = "col-md-4">
+## Mabebulelo
+ ![*Hi `r params$year`, nhlayo ya vana yo ringana `r freq$TotalBirth` va beburiwile, lava katsaka `r freq$MaleBirth` wa vafana,  na `r freq$FemaleBirth` wa vanhwanyana.*](C:\Users\Chido\Documents\CFB Reports\HF_Birth.png)
+</div>
+  
+<div class = "col-md-4">
+## Mafu
+ ![*Hi `r params$year`, nhalyo ya vanhu vo ringana `r freq$TotalDeaths` va lovile, lava katsaka `r freq$MaleDeaths` waxinuna na `r freq$FemaleDeaths` vaxisati.*](C:\Users\Chido\Documents\CFB Reports\HF_Death.png)
+</div>
+  
+<div class = "col-md-4">
+## Marhurhelo
+![*Hi `r params$year`, `r freq$'TotInMig&lntMig'` wa vanhu va ngenile emugangeni naswona `r freq$TotMigExtMig` wa vanhu va rhurhile.*](C:\Users\Chido\Documents\CFB Reports\HF_Migration.png)
+</div>
+</div>
+
+
+<font size = "3"> **Papila leri ra vuxokoxoko ri nyika vuxokoxoko hi xitalo mayelana na ku cinca eka nhlayo ya vanhu, leswi swi endlekaka loko vanhu va beburiwa, va lova, va nghena kumbe ku rhurha emugangeni. Vuxokoxoko hi xitalo mi nga byi kuma hikuva mi byi kombela eyunitini ya swarihanyu ya Wits. Agincourt.** </font>
+
+<center> 
+<font size = "3">Himi tivisa hungu leri ntshwa, yuniti ya vulavisisi ya MRC/Wits-Agincourt Unit yitava yi tirhisa nomboro leyi landzelaka kuti hlanganisa na n'wina xikan'we no endla mindzavisiso yo hambanahambana</font>
+
+<center> <font size = "8">**013 045 0730** </font> 
+</center>
+
+
+
+
+

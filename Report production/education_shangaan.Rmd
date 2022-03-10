@@ -1,0 +1,199 @@
+---
+title: "VUXOKOXOKO BYA DYONDZO"
+author: ""
+output: pdf_document
+geometry: margin=0.5cm
+params:
+  year: NA
+  village: NA
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{sectsty} \sectionfont{\centering}
+- \usepackage{titling}
+- \pretitle{\begin{center}
+    \includegraphics[width=6.5in,height=5in]{"C:/Users/Chido/Pictures/logo.jpg"}\LARGE\\}
+- \posttitle{\end{center}}
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RODBC)
+library(tidyverse)
+library(gridExtra)
+
+ name = "Chido"
+ 
+  if (params$village == 1) {
+    name = "Agincourt"
+  } else if (params$village == 80) {
+    name = "Original villages within the Agincourt Health and Demographic Surveillence Site "
+  } else if (params$village == 90) {
+    name = "Agincourt Health and Demographic Surveillence Site"
+  } else if (params$village == 2) {
+    name = "Croquetlawn"
+  } else if (params$village == 3) {
+    name = "Cunningmore A"
+  } else if (params$village == 4) {
+    name = "Cunningmore B"
+  } else if (params$village == 5) {
+    name = "Huntington"
+  } else if (params$village == 6) {
+    name = "Ireagh A"
+  } else if (params$village == 7) {
+    name = "Ireagh B"
+  } else if (params$village == 8) {
+    name = "Justicia A"
+  } else if (params$village == 9) {
+    name = "Kildare A"
+  } else if (params$village == 10) {
+    name = "Kildare B"
+  } else if (params$village == 11) {
+    name = "Lillydale A"
+  } else if (params$village == 12) {
+    name = "Lillydale B"
+  } else if (params$village == 13) {
+    name = "Newington B"
+  } else if (params$village == 14) {
+    name = "Newington C"
+  } else if (params$village == 15) {
+    name = "Somerset A"
+  } else if (params$village == 16) {
+    name = "Xanthia"
+  } else if (params$village == 21) {
+    name = "Khaya Lami"
+  } else if (params$village == 22) {
+    name = "Croquet Lawn B"
+  } else if (params$village == 23) {
+    name = "Belfast"
+  } else if (params$village == 24) {
+    name = "Dumphries A"
+  } else if (params$village == 25) {
+    name = "Dumphries B"
+  } else if (params$village == 26) {
+    name = "Dumphries C"
+  } else if (params$village == 27) {
+    name = "Ireagh C"
+  } else if (params$village == 28) {
+    name = "Somerset C"
+  } else if (params$village == 29) {
+    name = "MP Stream"
+  } else if (params$village == 30) {
+    name = "Rolle C"
+  } else if (params$village == 31) {
+    name = "Kumani"
+  } else {
+    name = "Makaringe"
+  }
+# setup  ODBC connction to the cfb databse
+con <- odbcConnect("SummaryIndicators")
+       sqlQuery(con,"select * from cfb..CurrentEdu") %>%
+       filter(VillNo == params$village, Years == params$year) %>%
+       select(Years, Age, PreSchool, Grade1to4, Grade5to7, Grade8to12, Incomplete_Tertiary, Complete_Tertiary, Total_Pop) %>%
+      gather(Education_Level, Number, -c(Years, Age, Total_Pop) ) %>%
+      select(Years, Age, Education_Level, Number, Total_Pop) -> currentedu
+```
+
+
+# Eka muganga wa`r name` `r params$year`
+
+```{r, echo=FALSE, warning= FALSE,fig.align = 'center' ,out.height = "70%"}
+currentedu$Education_Level <- factor(currentedu$Education_Level)
+levels(currentedu$Education_Level) <- c("Complete tertiary","Grade 1 to 4","Grade 5 to 7","Grade 8 to 12","Incomplete tertiary","Pre School")
+currentedu$Education_Level <- factor(currentedu$Education_Level, levels = c("Pre School","Grade 1 to 4","Grade 5 to 7","Grade 8 to 12","Incomplete tertiary","Complete tertiary"))
+
+
+ currentedu %>%
+   filter(Education_Level== "Pre School") %>%
+   select(Age, Total_Pop) %>%
+   distinct() -> m1
+ 
+colnames(m1) <- c("Age","Number")
+
+#Renaming the Value labels from english to Tsonga
+names(currentedu)[5] <- "Nhlayo ya vanhi"
+currentedu$Education_Level <- as.character(currentedu$Education_Level)
+currentedu[currentedu == "Pre School"]<-"Xikolo xalehansi"
+currentedu[currentedu == "Grade 1 to 4"]<-"Gireyedi ya 1-4"
+currentedu[currentedu == "Grade 5 to 7"]<-"Gireyedi ya 5-7"
+currentedu[currentedu == "Grade 8 to 12"]<-"Gireyedi ya 8-12"
+currentedu[currentedu == "Incomplete tertiary"]<-"Ava hetisanga tidyondzo ta xikolo xahenhla"
+currentedu[currentedu == "Complete tertiary"]<-"Va hetisile tidyondzo ta xikolo xale henhla"
+
+
+ 
+                     ggplot(data =currentedu, aes(x = factor(Age), y = Number)) +
+                     geom_col(aes(fill= Education_Level)) +
+                     geom_line(data = m1, aes(y =Number ,x= factor(Age), group = 1)) +
+                    scale_fill_manual(values = c("#8c510a","#d8b365","#f6e8c3","#c7eae5","#5ab4ac","#01665e")) +
+                     theme_classic() +
+                     labs(y ='Nhlayo ya vadyondzi',
+                          x = 'Malembe',
+                          title= "Vana lava tsariseke ku nghena xikolo kuya hi ntlawa wa malembe",
+                          fill="Nhlayo ya vadyondzi\n"
+                         ) +
+                     theme(legend.title = element_blank()) +
+                     theme(legend.box =  "horizontal",
+                           legend.position = "top",
+                           legend.text = element_text(size = 8),
+                           text = element_text(family = "Bookman"),
+                           title = element_text(color = "gray25"),
+                           plot.caption = element_text(color = "gray30"),
+                          plot.subtitle = element_text(size = 12))
+```
+
+```{r pressure, echo=FALSE,warning=FALSE,fig.align = 'center', out.height= "36%"}
+
+
+currentedu %>%
+  filter(Age > 9 & Education_Level == "Gireyedi ya 8-12") %>%
+  dplyr::select(Age, Number,'Nhlayo ya vanhi') %>%
+  gather(Category,Value,-c(Age)) %>%
+  mutate(Category =fct_relevel(Category,"Nhlayo ya vanhi","Number")) -> t1
+
+levels(t1$Category) <- c("nhlayo ya vanhi","Gireyedi ya 8-12")
+
+  ggplot(t1, aes(x = Age, y = Value, fill=Category)) +
+  geom_area(stat="identity", position = "dodge") +
+  ylab('Number of Students') +
+  xlab('Age') +
+  scale_fill_manual(values = c("#998ec3","#c7bdbd"))+
+  theme_classic() +
+  theme(legend.title.align=0.5,
+        legend.box =  "horizontal",
+        text = element_text(family = "Bookman"),
+        title = element_text(color = "gray25"),
+        plot.caption = element_text(color = "gray30"),
+        legend.text=element_text(size=8),
+        legend.title = element_blank(),
+        legend.position="bottom") +
+  labs(title= "Vantshwa emigangeni lava dyondzaka Gireyedi ya 8-12",
+       x = 'Malembe',
+       y = 'Nhlayo ya vadyondzi') -> p1
+
+currentedu %>%
+  filter(Age > 15 , Education_Level == "Ava hetisanga tidyondzo ta xikolo xahenhla") %>%
+  select(Age, Number,'Nhlayo ya vanhi') %>%
+  gather(Category,Value,-c(Age)) %>%
+  mutate(Category =fct_relevel(Category,"Nhlayo ya vanhi","Number")) -> t2
+levels(t2$Category) <- c("Nhlayo ya vanhi","xikolo xale henhla")
+
+  ggplot(t2, aes(x = Age, y = Value, fill=Category)) +
+  geom_area(stat="identity", position = "dodge") +
+  scale_fill_manual(values = c("#998ec3","#c7bdbd"))+
+  theme_classic() +
+  theme(legend.title.align=0.5,
+        legend.box =  "horizontal",
+        text = element_text(family = "Bookman"),
+        title = element_text(color = "gray25"),
+        plot.caption = element_text(color = "gray30"),
+        legend.text=element_text(size=8),
+        legend.title = element_blank(),
+        legend.position="bottom") +
+  labs(title= "Vantshwa emigangeni lava dyondzaka  xikolo xale henhla",
+       x = 'Malembe',
+       y = 'Nhlayo ya vadyondzi') -> p2
+
+grid.arrange(p1, p2, ncol =2)
+```

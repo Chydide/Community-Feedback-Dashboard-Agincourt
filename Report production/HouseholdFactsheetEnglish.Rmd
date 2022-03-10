@@ -1,0 +1,200 @@
+---
+title: ""
+author: ""
+date: ""
+output: html_document
+params:
+  year: NA
+  village: NA
+---
+
+
+<style type="text/css">
+.main-container {
+  max-width: 2000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.lp = '')
+library(RODBC)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(forcats)
+library(gridExtra)
+library(RColorBrewer)
+library(png)
+library(cowplot)
+library(magick)
+#library(kableExtra)
+
+
+ name = "Chido"
+ 
+  if (params$village == 1) {
+    name = "Agincourt"
+  } else if (params$village == 80) {
+    name = "Original villages within the Agincourt Health and Demographic Surveillence Site "
+  } else if (params$village == 90) {
+    name = "All villages within the Agincourt Health and Demographic Surveillence Site"
+  } else if (params$village == 2) {
+    name = "Croquetlawn"
+  } else if (params$village == 3) {
+    name = "Cunningmore A"
+  } else if (params$village == 4) {
+    name = "Cunningmore B"
+  } else if (params$village == 5) {
+    name = "Huntington"
+  } else if (params$village == 6) {
+    name = "Ireagh A"
+  } else if (params$village == 7) {
+    name = "Ireagh B"
+  } else if (params$village == 8) {
+    name = "Justicia A"
+  } else if (params$village == 9) {
+    name = "Kildare A"
+  } else if (params$village == 10) {
+    name = "Kildare B"
+  } else if (params$village == 11) {
+    name = "Lillydale A"
+  } else if (params$village == 12) {
+    name = "Lillydale B"
+  } else if (params$village == 13) {
+    name = "Newington B"
+  } else if (params$village == 14) {
+    name = "Newington C"
+  } else if (params$village == 15) {
+    name = "Somerset A"
+  } else if (params$village == 16) {
+    name = "Xanthia"
+  } else if (params$village == 21) {
+    name = "Khaya Lami"
+  } else if (params$village == 22) {
+    name = "Croquet Lawn B"
+  } else if (params$village == 23) {
+    name = "Belfast"
+  } else if (params$village == 24) {
+    name = "Dumphries A"
+  } else if (params$village == 25) {
+    name = "Dumphries B"
+  } else if (params$village == 26) {
+    name = "Dumphries C"
+  } else if (params$village == 27) {
+    name = "Ireagh C"
+  } else if (params$village == 28) {
+    name = "Somerset C"
+  } else if (params$village == 29) {
+    name = "MP Stream"
+  } else if (params$village == 30) {
+    name = "Rolle C"
+  } else if (params$village == 31) {
+    name = "Kumani"
+  } else {
+    name = "Makaringe"
+  }
+```
+
+```{r echo =FALSE}
+# setup  ODBC connction to the cfb databse
+
+
+con <- odbcDriverConnect("driver=SQL Server;server=DELL;database=CFB")
+Pop <- sqlQuery(con,"select * from cfb..TotPopBySex") %>%
+       filter(VillNo == params$village, Years == params$year)
+
+Households <- sqlQuery(con,"select * from cfb..Households") %>%
+       filter(VillNo == params$village, Years == params$year)
+```
+
+<!-- ```{r markd, echo =FALSE} -->
+<!-- edu <- sqlQuery(con,"select * from cfb..HFEdu")  %>% -->
+<!--        dplyr::select(Years, PoliticalVillage, Gender, InSchool)  %>% -->
+<!--        filter(VillNo == params$village & Years == params$year) %>% -->
+<!--        spread(Gender, InSchool) -->
+<!-- ``` -->
+
+```{r mads, echo = FALSE}
+popage <- sqlQuery(con,"select * from cfb..PopulationByAgeGrp") %>%
+          filter(VillNo == params$village, Years == params$year, Ordered>12) %>%
+          mutate(Male = sum(MalePop),Female = sum(FemalePop),Total =sum(MidYearPop)) %>%
+          dplyr::select(Male, Female, Total) %>%
+          head(.,1)
+
+ freq <- sqlQuery(con,"select * from cfb..Freq")   %>%
+       filter(VillNo == params$village, Years == params$year) %>%       
+       spread(Category, Count)
+
+# %>%
+#   filter(Year == year +1, PoliticalVillage== village) %>%
+#   select(Year,Source,NoofHouseholds)
+
+
+```
+<div class = "row">
+  
+<div class = "col-md-5">
+<body style ="background-color: powderblue;">
+<h1 style= "color:white;"> <font size = "6">`r name` Village Factsheet `r params$year` </font> </h1>
+</body>
+</div>
+  
+<div class = "col-md-7">
+![](C:\Users\user\Documents\CFB Reports\Agincourt.png)
+</div>
+</div>
+
+<div class = "row">
+  
+<div class = "col-md-4">
+## Population
+ ![*In `r params$year`, there were `r Pop$Population` people living in `r Households$HouseholdCnt` households, with `r Pop$Male` men and `r Pop$Female` women.*](C:\Users\user\Documents\CFB Reports\HF_Population.png)
+</div>
+  
+<div class = "col-md-4">
+## Education
+ ![*In `r params$year`, there were `r Pop$Population` people living in `r Households$HouseholdCnt` households, with `r Pop$Male` men and `r Pop$Female` women.*](C:\Users\user\Documents\CFB Reports\HF_Education.png)
+</div>
+  
+<div class = "col-md-4">
+## The elderly
+![*In `r params$year` there were `r popage$Total` people over the age of 60.  Of this there were `r popage$Male` men and `r popage$Female` women.*](C:\Users\user\Documents\CFB Reports\HF_Elderly.png)
+</div>
+</div>
+
+<center>
+<font size = "6"> **Hi nkwerhu hiva nkoka!** </font>
+
+
+<font size = "5"> **We all count!**  </font>
+</center>
+
+<div class = "row">
+  
+<div class = "col-md-4">
+## Births
+ ![*In `r params$year`, there were a total of `r freq$TotalBirth` babies born, and `r freq$MaleBirth` were boys,  and `r freq$FemaleBirth` were girls.*](C:\Users\user\Documents\CFB Reports\HF_Birth.png)
+</div>
+  
+<div class = "col-md-4">
+## Deaths
+ ![*In `r params$year`, a total of `r freq$TotalDeaths` people died, `r freq$MaleDeaths` were male and `r freq$FemaleDeaths` women.*](C:\Users\user\Documents\CFB Reports\HF_Death.png)
+</div>
+  
+<div class = "col-md-4">
+## Migration
+![*In `r params$year`, `r freq$TotalInMig` people moved into the village and `r freq$TotalOutMig` moved out.*](C:\Users\user\Documents\CFB Reports\HF_Migration.png)
+</div>
+</div>
+
+
+<font size = "3"> **This fact sheet provides basic information on the population - numbers, births, deaths and migration of people in your village. More detailed information can be obtained upon request from the MRC/Wits-Agincourt Unit.** </font>
+
+
+
+
+
