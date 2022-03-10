@@ -4,7 +4,7 @@
 
 
 
-# Community-Feedback-Dashboard-Agincourt
+<h1 align="center"> Community Feedback Dashboard Agincourt  </h1>
 This is a reporting tool created to help stakeholders and colleagues within the organisation 
 
 This app alllows the user to look at data for Agincourt across the 27 villages at any time period of reference between 1992 and 2018. This helps users in navigating the large dataset in summarized measures, these are divided into 3 main categories. 
